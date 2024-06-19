@@ -132,6 +132,9 @@ function M.highlight_translation_references()
   local translation_files = M.get_translation_files()
   local bufnr = api.nvim_get_current_buf()
 
+  -- Clear previous highlights
+  api.nvim_buf_clear_namespace(bufnr, -1, 0, -1)
+
   local parser = ts.get_parser(bufnr, 'javascript')
   local tree = parser:parse()[1]
   local root = tree:root()
@@ -161,7 +164,7 @@ function M.highlight_translation_references()
       is_missing_translation = false
     end
 
-    local hl_group = is_missing_translation and "ErrorMsg" or "Comment"
+    local hl_group = is_missing_translation and "Comment" or "ErrorMsg"
     local start_row, start_col, end_row, end_col = translation_key_node:range()
     api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
   end

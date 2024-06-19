@@ -28,5 +28,4 @@ Using Lazy
 ## TODO
 
 - LSP missing translations
-- Remove previous highlight
 - Fix missing translations
