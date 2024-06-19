@@ -1,5 +1,6 @@
 local api = vim.api
 local fn = vim.fn
+local ts = vim.treesitter
 
 local M = {}
 local json = require("snippet_converter.utils.json_utils")
@@ -130,41 +131,76 @@ function M.highlight_translation_references()
 
   local translation_files = M.get_translation_files()
   local bufnr = api.nvim_get_current_buf()
-  local lines = api.nvim_buf_get_lines(bufnr, 0, -1, false)
 
-  local missing_in_any_file = {}
+  local parser = ts.get_parser(bufnr, 'javascript')
+  local tree = parser:parse()[1]
+  local root = tree:root()
 
-  for lnum, line in ipairs(lines) do
-    local start = 1
-    while true do
-      local s, e, translation_key = string.find(line, 't%(["\'](.-)["\']%)', start)
-      if not s then break end
+  local query = ts.query.parse('javascript', [[
+        (call_expression
+            function: (identifier) @func_name (#eq? @func_name "t")
+            arguments: (arguments
+                (string
+                    (string_fragment) @translation_key
+                )
+            )
+        )
+    ]])
 
-      local is_missing_translation = true
+  for _, match in query:iter_matches(root, bufnr, 0, -1) do
+    local translation_key_node = match[#match]
+    local translation_key = ts.get_node_text(translation_key_node, bufnr)
 
-      for _, file in ipairs(translation_files) do
-        local translations = load_translations(file)
-        if translations[translation_key] then
-          is_missing_translation = false
-          break
-        end
-        missing_in_any_file[translation_key] = true
+    local is_missing_translation = true
+
+    for _, file in ipairs(translation_files) do
+      local translations = load_translations(file)
+      if translations[translation_key] then
+        break
       end
-
-
-      if is_missing_translation or missing_in_any_file[translation_key] == true then
-        api.nvim_buf_add_highlight(bufnr, -1, "ErrorMsg", lnum - 1, s + 2, e - 2)
-      else
-        api.nvim_buf_add_highlight(bufnr, -1, "Comment", lnum - 1, s + 2, e - 2)
-      end
-
-      start = e + 1
+      is_missing_translation = false
     end
+
+    local hl_group = is_missing_translation and "ErrorMsg" or "Comment"
+    local start_row, start_col, end_row, end_col = translation_key_node:range()
+    api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
   end
 end
 
 function M.show_translation_menu()
-  local translation_key = vim.fn.expand("<cword>")
+  local bufnr = api.nvim_get_current_buf()
+  local cursor = api.nvim_win_get_cursor(0)
+  local row, col = cursor[1] - 1, cursor[2]
+
+  local parser = ts.get_parser(bufnr, 'javascript')
+  local tree = parser:parse()[1]
+  local root = tree:root()
+
+  local query = ts.query.parse('javascript', [[
+        (call_expression
+            function: (identifier) @func_name (#eq? @func_name "t")
+            arguments: (arguments
+                (string
+                    (string_fragment) @translation_key
+                )
+            )
+        )
+    ]])
+
+  local translation_key
+  for _, match in query:iter_matches(root, bufnr, row, row + 1) do
+    local translation_key_node = match[#match]
+    local start_row, start_col, end_row, end_col = translation_key_node:range()
+    if row == start_row and col >= start_col and col <= end_col then
+      translation_key = ts.get_node_text(translation_key_node, bufnr)
+      break
+    end
+  end
+
+  if not translation_key then
+    return
+  end
+
   local project_root = get_project_root()
   if not project_root then
     return
