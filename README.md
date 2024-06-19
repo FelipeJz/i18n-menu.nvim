@@ -1,7 +1,7 @@
 # i18n menu
 
 This plugin simplifies the management of manual translations using i18n plugins.
-Heavily inspired by i18n Ally
+Work in progress. Only tested in next-intl. Heavily inspired by i18n Ally.
 
 ## Installation
 
@@ -29,3 +29,7 @@ Using Lazy
 
 - LSP missing translations
 - Fix missing translations
+- No dependecy JSON formatter
+- Custom highlight colors
+- Custom translate function
+- Custom messages location
