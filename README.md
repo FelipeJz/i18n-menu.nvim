@@ -27,7 +27,7 @@ Using Lazy
 
 ## TODO
 
-- LSP missing translations
+- Diagnostics
 - Fix missing translations
 - No dependecy JSON formatter
 - Custom highlight colors
