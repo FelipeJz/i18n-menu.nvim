@@ -1,6 +1,6 @@
 # i18n menu
 
-This plugin simplifies the management of manual translations using i18n plugins.
+This plugin simplifies the management of manual translations using react i18n extensions.
 Work in progress. Only tested in next-intl. Heavily inspired by i18n Ally.
 
 ## Installation
@@ -28,6 +28,8 @@ Using Lazy
 ## TODO
 
 - Diagnostics
+- Show current translation in menu
+- Update translation
 - Fix missing translations
 - No dependecy JSON formatter
 - Custom highlight colors

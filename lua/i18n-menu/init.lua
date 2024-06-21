@@ -129,7 +129,7 @@ function M.setup()
   api.nvim_command(
     "autocmd BufEnter,BufRead *.jsx,*.tsx lua require('i18n-menu').highlight_translation_references()")
   api.nvim_command(
-    "autocmd TextChanged,TextChangedI *.jsx,*.tsx lua require('i18n-menu').highlight_translation_references()")
+    "autocmd InsertLeave *.jsx,*.tsx lua require('i18n-menu').highlight_translation_references()")
   api.nvim_command("augroup END")
 
   api.nvim_command("command! TranslateMenu lua require('i18n-menu').show_translation_menu()")
