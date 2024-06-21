@@ -113,12 +113,13 @@ function M.show_translation_menu()
       local new_translation = vim.fn.input("Enter translation for '" ..
         translation_key .. "' in " .. selected_language .. ": ")
 
-      local translation_file = messages_dir .. selected_language .. ".json"
-      local translations = util.load_translations(translation_file)
-      translations[translation_key] = new_translation
-      util.save_translations(translation_file, translations)
-
-      M.highlight_translation_references()
+      if new_translation ~= "" then
+        local translation_file = messages_dir .. selected_language .. ".json"
+        local translations = util.load_translations(translation_file)
+        translations[translation_key] = new_translation
+        util.save_translations(translation_file, translations)
+        M.highlight_translation_references()
+      end
     end
   end)
 end
