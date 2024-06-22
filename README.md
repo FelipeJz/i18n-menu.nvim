@@ -28,7 +28,6 @@ Using Lazy
 ## TODO
 
 - Diagnostics
-- Show current translation in menu
 - Update translation
 - Fix missing translations
 - No dependecy JSON formatter

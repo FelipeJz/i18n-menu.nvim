@@ -98,8 +98,9 @@ function M.show_translation_menu()
   for _, file in ipairs(translation_files) do
     local language = fn.fnamemodify(file, ":t:r")
     local translations = util.load_translations(file)
-    local status = translations[translation_key] and "translated" or "no translation"
-    table.insert(items, language .. " (" .. status .. ")")
+    local current_translation = translations[translation_key]
+    local status = current_translation and current_translation or "------"
+    table.insert(items, language .. ": " .. status)
   end
 
   vim.ui.select(items, {
