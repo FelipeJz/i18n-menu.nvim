@@ -11,11 +11,15 @@ function M.highlight_translation_references()
     return
   end
 
+  local namespace = api.nvim_create_namespace("i18n-menu")
   local translation_files = util.get_translation_files()
   local bufnr = api.nvim_get_current_buf()
 
   -- Clear previous highlights
   api.nvim_buf_clear_namespace(bufnr, -1, 0, -1)
+
+  -- Clear diagnostics
+  vim.diagnostic.reset(nil, bufnr)
 
   local parser = ts.get_parser(bufnr, 'javascript')
   local tree = parser:parse()[1]
@@ -31,6 +35,8 @@ function M.highlight_translation_references()
             )
         )
     ]])
+
+  local diagnostics = {}
 
   for _, match in query:iter_matches(root, bufnr, 0, -1) do
     local translation_key_node = match[#match]
@@ -49,7 +55,22 @@ function M.highlight_translation_references()
     local hl_group = is_missing_translation and "Comment" or "ErrorMsg"
     local start_row, start_col, end_row, end_col = translation_key_node:range()
     api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
+
+    if not is_missing_translation then
+      table.insert(diagnostics, {
+        bufnr = bufnr,
+        lnum = start_row,
+        col = start_col,
+        end_lnum = end_row,
+        end_col = end_col,
+        severity = vim.diagnostic.severity.WARN,
+        source = "i18n-menu",
+        message = "Translation missing: " .. translation_key,
+      })
+    end
   end
+  -- Set diagnostics
+  vim.diagnostic.set(namespace, bufnr, diagnostics)
 end
 
 function M.show_translation_menu()
