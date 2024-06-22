@@ -100,19 +100,24 @@ function M.show_translation_menu()
     local translations = util.load_translations(file)
     local current_translation = translations[translation_key]
     local status = current_translation and current_translation or "------"
-    table.insert(items, language .. ": " .. status)
+    table.insert(items, {
+      language = language,
+      status = status,
+      current_translation = current_translation
+    })
   end
 
   vim.ui.select(items, {
     prompt = "Choose a language to add translation:",
     format_item = function(item)
-      return ">> " .. item
+      return ">> " .. item.language .. ": " .. item.status
     end,
   }, function(choice)
     if choice then
-      local selected_language = choice:match("^(%w+)")
+      local selected_language = choice.language
+      local current_translation = choice.current_translation or ""
       local new_translation = vim.fn.input("Enter translation for '" ..
-        translation_key .. "' in " .. selected_language .. ": ")
+        translation_key .. "' in " .. selected_language .. ": ", current_translation)
 
       if new_translation ~= "" then
         local translation_file = messages_dir .. selected_language .. ".json"
