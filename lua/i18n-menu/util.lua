@@ -78,20 +78,17 @@ function M.read_config_file()
     return nil
   end
 
-  local config_file = project_root .. "/i18n.conf"
-  local f = io.open(config_file, "r")
-  if f == nil then
+  local config_path = project_root .. "/i18n.json"
+  local file = io.open(config_path, "r")
+  if file then
+    local content = file:read("*a")
+    file:close()
+    local config = vim.fn.json_decode(content)
+    return config
+  else
+    print("Error: i18n-menu: i18n.json not found")
     return nil
   end
-
-  local content = {}
-  for line in f:lines() do
-    for key, value in string.gmatch(line, "(%w+)%s*=%s*(%w+)") do
-      content[key] = value
-    end
-  end
-  f:close()
-  return content
 end
 
 function M.get_translation_files()
@@ -105,20 +102,6 @@ function M.get_translation_files()
   local translation_files = fn.glob(messages_dir .. "*.json", false, true)
 
   return translation_files
-end
-
-function M.read_translations()
-  local config = M.read_config_file()
-  local default_language = config and config.default_language or "en"
-  local translation_file = M.get_project_root() .. "/messages/" .. default_language .. ".json"
-
-  local translations = {}
-  local data = M.load_translations(translation_file)
-  for key, _ in pairs(data) do
-    translations[key] = true
-  end
-
-  return translations
 end
 
 return M

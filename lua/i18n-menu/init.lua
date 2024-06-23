@@ -6,6 +6,7 @@ local M = {}
 local util = require("i18n-menu.util")
 
 function M.highlight_translation_references()
+  local config = util.read_config_file()
   local project_root = util.get_project_root()
   if not project_root then
     return
@@ -25,16 +26,17 @@ function M.highlight_translation_references()
   local tree = parser:parse()[1]
   local root = tree:root()
 
-  local query = ts.query.parse('javascript', [[
+  local function_name = config and config.function_name or "t"
+  local query = ts.query.parse('javascript', string.format([[
         (call_expression
-            function: (identifier) @func_name (#eq? @func_name "t")
+            function: (identifier) @func_name (#eq? @func_name "%s")
             arguments: (arguments
                 (string
                     (string_fragment) @translation_key
                 )
             )
         )
-    ]])
+    ]], function_name))
 
   local diagnostics = {}
 
@@ -75,6 +77,7 @@ end
 
 function M.show_translation_menu()
   local bufnr = api.nvim_get_current_buf()
+  local config = util.read_config_file()
   local cursor = api.nvim_win_get_cursor(0)
   local row, col = cursor[1] - 1, cursor[2]
 
@@ -82,16 +85,17 @@ function M.show_translation_menu()
   local tree = parser:parse()[1]
   local root = tree:root()
 
-  local query = ts.query.parse('javascript', [[
+  local function_name = config and config.function_name or "t"
+  local query = ts.query.parse('javascript', string.format([[
         (call_expression
-            function: (identifier) @func_name (#eq? @func_name "t")
+            function: (identifier) @func_name (#eq? @func_name "%s")
             arguments: (arguments
                 (string
                     (string_fragment) @translation_key
                 )
             )
         )
-    ]])
+    ]], function_name))
 
   local translation_key
   for _, match in query:iter_matches(root, bufnr, row, row + 1) do

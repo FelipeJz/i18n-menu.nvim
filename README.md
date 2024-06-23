@@ -25,10 +25,19 @@ Using Lazy
 - Requires [snippet-converter.nvim by smjonas](https://github.com/smjonas/snippet-converter.nvim)
 - :TranslationMenu with cursor over the string
 
+### Config file
+
+i18n.json - This optional config file should be located in the project_root and allows you to change some variables at a project level.
+
+```JSON
+{
+    "function_name": "t"
+}
+```
+
 ## TODO
 
 - Fix missing translations
 - No dependecy JSON formatter
 - Custom highlight colors
-- Custom translate function
 - Custom messages location
