@@ -80,27 +80,52 @@ function M.read_config_file()
 
   local config_path = project_root .. "/i18n.json"
   local file = io.open(config_path, "r")
-  if file then
-    local content = file:read("*a")
-    file:close()
-    local config = vim.fn.json_decode(content)
-    return config
-  else
-    print("Error: i18n-menu: i18n.json not found")
+  if not file then
     return nil
   end
+
+  local content = file:read("*a")
+  file:close()
+
+  if content == nil or content == "" then
+    return nil
+  end
+
+  local config = vim.fn.json_decode(content)
+  if config == nil then
+    return nil
+  end
+
+  return config
 end
 
-function M.get_translation_files()
+function M.directory_exists(path)
+  local stat = vim.loop.fs_stat(path)
+  return stat and stat.type == "directory"
+end
+
+function M.get_messages_dir()
+  local config = M.read_config_file()
   local project_root = M.get_project_root()
 
   if not project_root then
     return {}
   end
 
-  local messages_dir = project_root .. "/messages/"
-  local translation_files = fn.glob(messages_dir .. "*.json", false, true)
+  local messages_dir = config and config.messages_dir and project_root .. config.messages_dir or
+      project_root .. "/messages"
 
+  if not M.directory_exists(messages_dir) then
+    print("Error: i18n-menu: Messages directory not found")
+    return nil
+  end
+
+  return messages_dir
+end
+
+function M.get_translation_files()
+  local messages_dir = M.get_messages_dir()
+  local translation_files = fn.glob(messages_dir .. "/*.json", false, true)
   return translation_files
 end
 

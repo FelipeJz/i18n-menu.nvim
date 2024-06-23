@@ -32,6 +32,7 @@ i18n.json - This optional config file should be located in the project_root and 
 ```JSON
 {
     "function_name": "t"
+    "messages_dir": "/messages"
 }
 ```
 
@@ -40,4 +41,3 @@ i18n.json - This optional config file should be located in the project_root and 
 - Fix missing translations
 - No dependecy JSON formatter
 - Custom highlight colors
-- Custom messages location

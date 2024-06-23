@@ -13,8 +13,12 @@ function M.highlight_translation_references()
   end
 
   local namespace = api.nvim_create_namespace("i18n-menu")
-  local translation_files = util.get_translation_files()
   local bufnr = api.nvim_get_current_buf()
+
+  local translation_files = util.get_translation_files()
+  if not translation_files then
+    return
+  end
 
   -- Clear previous highlights
   api.nvim_buf_clear_namespace(bufnr, -1, 0, -1)
@@ -116,8 +120,11 @@ function M.show_translation_menu()
     return
   end
 
-  local messages_dir = project_root .. "/messages/"
-  local translation_files = fn.glob(messages_dir .. "*.json", false, true)
+  local messages_dir = util.get_messages_dir()
+  local translation_files = util.get_translation_files()
+  if not translation_files or not messages_dir then
+    return
+  end
   local items = {}
 
   for _, file in ipairs(translation_files) do
@@ -145,7 +152,7 @@ function M.show_translation_menu()
         translation_key .. "' in " .. selected_language .. ": ", current_translation)
 
       if new_translation ~= "" then
-        local translation_file = messages_dir .. selected_language .. ".json"
+        local translation_file = messages_dir .. "/" .. selected_language .. ".json"
         local translations = util.load_translations(translation_file)
         translations[translation_key] = new_translation
         util.save_translations(translation_file, translations)
