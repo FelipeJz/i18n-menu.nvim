@@ -21,7 +21,7 @@ function M.highlight_translation_references()
   end
 
   -- Clear previous highlights
-  api.nvim_buf_clear_namespace(bufnr, -1, 0, -1)
+  api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
 
   -- Clear diagnostics
   vim.diagnostic.reset(namespace, bufnr)
