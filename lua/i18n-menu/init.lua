@@ -24,7 +24,7 @@ function M.highlight_translation_references()
   api.nvim_buf_clear_namespace(bufnr, -1, 0, -1)
 
   -- Clear diagnostics
-  vim.diagnostic.reset(nil, bufnr)
+  vim.diagnostic.reset(namespace, bufnr)
 
   local parser = ts.get_parser(bufnr, 'javascript')
   local tree = parser:parse()[1]
@@ -125,6 +125,7 @@ function M.show_translation_menu()
   if not translation_files or not messages_dir then
     return
   end
+
   local items = {}
 
   for _, file in ipairs(translation_files) do
