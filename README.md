@@ -15,6 +15,7 @@ Using Lazy
   },
   config = function()
     require("i18n-menu").setup()
+    vim.keymap.set("n", "<leader>i", ":TranslateMenu<cr>")
   end,
 }
 
