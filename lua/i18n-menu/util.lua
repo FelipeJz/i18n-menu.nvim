@@ -125,6 +125,9 @@ end
 
 function M.get_translation_files()
   local messages_dir = M.get_messages_dir()
+  if not messages_dir then
+    return nil
+  end
   local translation_files = fn.glob(messages_dir .. "/*.json", false, true)
   return translation_files
 end
