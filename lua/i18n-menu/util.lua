@@ -1,6 +1,7 @@
 local api = vim.api
 local fn = vim.fn
 local M = {}
+local ts = vim.treesitter
 local json = require("snippet_converter.utils.json_utils")
 
 function M.load_translations(file)
@@ -130,6 +131,40 @@ function M.get_translation_files()
   end
   local translation_files = fn.glob(messages_dir .. "/*.json", false, true)
   return translation_files
+end
+
+function M.get_translation_key()
+  local bufnr = api.nvim_get_current_buf()
+  local config = M.read_config_file()
+  local cursor = api.nvim_win_get_cursor(0)
+  local row, col = cursor[1] - 1, cursor[2]
+
+  local parser = ts.get_parser(bufnr, 'javascript')
+  local tree = parser:parse()[1]
+  local root = tree:root()
+
+  local function_name = config and config.function_name or "t"
+  local query = ts.query.parse('javascript', string.format([[
+        (call_expression
+            function: (identifier) @func_name (#eq? @func_name "%s")
+            arguments: (arguments
+                (string
+                    (string_fragment) @translation_key
+                )
+            )
+        )
+    ]], function_name))
+
+  local translation_key
+  for _, match in query:iter_matches(root, bufnr, row, row + 1) do
+    local translation_key_node = match[#match]
+    local start_row, start_col, end_row, end_col = translation_key_node:range()
+    if row == start_row and col >= start_col and col <= end_col then
+      translation_key = ts.get_node_text(translation_key_node, bufnr)
+      break
+    end
+  end
+  return translation_key
 end
 
 return M

@@ -80,37 +80,7 @@ function M.highlight_translation_references()
 end
 
 function M.show_translation_menu()
-  local bufnr = api.nvim_get_current_buf()
-  local config = util.read_config_file()
-  local cursor = api.nvim_win_get_cursor(0)
-  local row, col = cursor[1] - 1, cursor[2]
-
-  local parser = ts.get_parser(bufnr, 'javascript')
-  local tree = parser:parse()[1]
-  local root = tree:root()
-
-  local function_name = config and config.function_name or "t"
-  local query = ts.query.parse('javascript', string.format([[
-        (call_expression
-            function: (identifier) @func_name (#eq? @func_name "%s")
-            arguments: (arguments
-                (string
-                    (string_fragment) @translation_key
-                )
-            )
-        )
-    ]], function_name))
-
-  local translation_key
-  for _, match in query:iter_matches(root, bufnr, row, row + 1) do
-    local translation_key_node = match[#match]
-    local start_row, start_col, end_row, end_col = translation_key_node:range()
-    if row == start_row and col >= start_col and col <= end_col then
-      translation_key = ts.get_node_text(translation_key_node, bufnr)
-      break
-    end
-  end
-
+  local translation_key = util.get_translation_key()
   if not translation_key then
     return
   end
@@ -163,6 +133,40 @@ function M.show_translation_menu()
   end)
 end
 
+function M.translate_default()
+  local config = util.read_config_file()
+
+  local translation_key = util.get_translation_key()
+  if not translation_key then
+    return
+  end
+
+  local project_root = util.get_project_root()
+  if not project_root then
+    return
+  end
+
+  local messages_dir = util.get_messages_dir()
+  local translation_files = util.get_translation_files()
+  if not translation_files or not messages_dir then
+    return
+  end
+
+  local default_lang = "en"
+  if config ~= nil then
+    if config.default_lang then
+      default_lang = config.default_lang
+    end
+  end
+
+  local translation_file = messages_dir .. "/" .. default_lang .. ".json"
+  local translations = util.load_translations(translation_file)
+  translations[translation_key] = translation_key
+  util.save_translations(translation_file, translations)
+  M.highlight_translation_references()
+  M.show_translation_menu()
+end
+
 function M.setup()
   api.nvim_command("augroup TranslateHighlight")
   api.nvim_command("autocmd!")
@@ -173,6 +177,7 @@ function M.setup()
   api.nvim_command("augroup END")
 
   api.nvim_command("command! TranslateMenu lua require('i18n-menu').show_translation_menu()")
+  api.nvim_command("command! TranslateDefault lua require('i18n-menu').translate_default()")
 end
 
 return M

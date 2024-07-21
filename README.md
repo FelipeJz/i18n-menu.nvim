@@ -15,7 +15,8 @@ Using Lazy
   },
   config = function()
     require("i18n-menu").setup()
-    vim.keymap.set("n", "<leader>i", ":TranslateMenu<cr>")
+    vim.keymap.set("n", "<leader>ii", ":TranslateMenu<cr>")
+    vim.keymap.set("n", "<leader>id", ":TranslateDefault<cr>")
   end,
 }
 
@@ -23,8 +24,8 @@ Using Lazy
 
 ## Usage
 
-- Requires [snippet-converter.nvim by smjonas](https://github.com/smjonas/snippet-converter.nvim)
-- :TranslationMenu with cursor over the string
+- :TranslationMenu - Shows the translation menu.
+- :TranslationDefault - Sets the key as the default translation, then shows the menu.
 
 ### Config file
 
@@ -33,7 +34,8 @@ i18n.json - This optional config file should be located in the project_root and 
 ```JSON
 {
     "function_name": "t"
-    "messages_dir": "/messages"
+    "messages_dir": "/messages",
+    "default_lang": "en"
 }
 ```
 
