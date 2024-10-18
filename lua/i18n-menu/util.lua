@@ -117,7 +117,6 @@ function M.get_messages_dir()
       project_root .. "/messages"
 
   if not M.directory_exists(messages_dir) then
-    print("Error: i18n-menu: Messages directory not found")
     return nil
   end
 
