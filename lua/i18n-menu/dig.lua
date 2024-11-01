@@ -1,7 +1,7 @@
 local M = {}
 
 function M.dig(table, path)
-  if not table or type(table) == "string" then
+  if not table or type(table) ~= "table" then
     return table
   end
 
