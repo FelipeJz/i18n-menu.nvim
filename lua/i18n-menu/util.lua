@@ -3,6 +3,7 @@ local fn = vim.fn
 local M = {}
 local ts = vim.treesitter
 local json = require("snippet_converter.utils.json_utils")
+local dig = require("i18n-menu.dig")
 
 function M.load_translations(file)
   local f = io.open(file, "r")
@@ -164,6 +165,22 @@ function M.get_translation_key()
     end
   end
   return translation_key
+end
+
+function M.highlight_group(is_present)
+  local config = M.read_config_file()
+  local present_highlight = dig.dig(config, "present_highlight") or "Comment"
+  local missing_highlight = dig.dig(config, "missing_highlight") or "ErrorMsg"
+
+  if is_present and present_highlight ~= "" then
+    return present_highlight
+  end
+
+  if not is_present and missing_highlight ~= "" then
+    return missing_highlight
+  end
+
+  return nil
 end
 
 return M

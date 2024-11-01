@@ -4,6 +4,7 @@ local ts = vim.treesitter
 
 local M = {}
 local util = require("i18n-menu.util")
+local dig = require("i18n-menu.dig")
 
 function M.highlight_translation_references()
   local config = util.read_config_file()
@@ -52,15 +53,18 @@ function M.highlight_translation_references()
 
     for _, file in ipairs(translation_files) do
       local translations = util.load_translations(file)
-      if translations[translation_key] then
+      if dig.dig(translations, translation_key) then
         break
       end
       is_missing_translation = false
     end
 
-    local hl_group = is_missing_translation and "Comment" or "ErrorMsg"
     local start_row, start_col, end_row, end_col = translation_key_node:range()
-    api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
+
+    local hl_group = util.highlight_group(is_missing_translation)
+    if hl_group then
+      api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
+    end
 
     if not is_missing_translation then
       table.insert(diagnostics, {
