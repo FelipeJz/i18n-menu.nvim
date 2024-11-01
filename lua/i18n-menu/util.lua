@@ -4,6 +4,7 @@ local M = {}
 local ts = vim.treesitter
 local json = require("snippet_converter.utils.json_utils")
 local dig = require("i18n-menu.dig")
+local json_util = require("i18n-menu.json_util")
 
 function M.load_translations(file)
   local f = io.open(file, "r")
@@ -31,11 +32,13 @@ function M.load_translations(file)
 end
 
 function M.save_translations(file, translations)
+  local order = json_util.keys_order(file)
+
   local f = io.open(file, "w")
   if f == nil then
     return false
   end
-  local prettyContent = json:pretty_print(translations, nil, true)
+  local prettyContent = json:pretty_print(translations, order, true)
   f:write(prettyContent)
   f:close()
   return true
