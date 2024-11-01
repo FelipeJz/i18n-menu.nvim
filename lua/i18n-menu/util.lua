@@ -35,7 +35,7 @@ function M.save_translations(file, translations)
   if f == nil then
     return false
   end
-  local prettyContent = json:pretty_print(translations)
+  local prettyContent = json:pretty_print(translations, nil, true)
   f:write(prettyContent)
   f:close()
   return true
