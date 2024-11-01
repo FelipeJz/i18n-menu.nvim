@@ -129,7 +129,7 @@ function M.show_translation_menu()
       if new_translation ~= "" then
         local translation_file = messages_dir .. "/" .. selected_language .. ".json"
         local translations = util.load_translations(translation_file)
-        translations[translation_key] = new_translation
+        dig.place(translations, translation_key, new_translation)
         util.save_translations(translation_file, translations)
         M.highlight_translation_references()
       end
