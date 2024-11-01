@@ -33,7 +33,7 @@ i18n.json - This optional config file should be located in the project_root and 
 
 ```JSON
 {
-    "function_name": "t"
+    "function_name": "t",
     "messages_dir": "/messages",
     "default_lang": "en"
 }
