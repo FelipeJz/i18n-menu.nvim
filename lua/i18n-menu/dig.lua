@@ -1,17 +1,21 @@
 local M = {}
 
+local function path_hd(path)
+  return string.match(path, "([^.]*)%.?(.*)")
+end
+
 function M.dig(table, path)
   if not table or type(table) ~= "table" then
     return table
   end
 
-  local head, tail = string.match(path, "([^.]*)%.?(.*)")
+  local head, tail = path_hd(path)
 
   return M.dig(table[head], tail)
 end
 
 function M.place(table, path, value)
-  local head, tail = string.match(path, "([^.]*)%.?(.*)")
+  local head, tail = path_hd(path)
 
   if tail == "" then
     table[head] = value
