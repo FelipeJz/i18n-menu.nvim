@@ -42,7 +42,5 @@ i18n.json - This optional config file should be located in the project_root and 
 ```
 
 ## TODO
-
-- Fix missing translations
+- Auto translate using external libraries
 - No dependecy JSON formatter
-- Custom highlight colors
