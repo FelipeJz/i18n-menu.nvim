@@ -1,0 +1,7 @@
+{
+  "login": "Login",
+  "store": {
+    "addtocart": "Add to Cart",
+    "checkout": "Checkout"
+  }
+}

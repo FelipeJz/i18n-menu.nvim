@@ -4,6 +4,7 @@ local ts = vim.treesitter
 
 local M = {}
 local util = require("i18n-menu.util")
+local dig = require("i18n-menu.dig")
 
 function M.highlight_translation_references()
   local config = util.read_config_file()
@@ -52,15 +53,18 @@ function M.highlight_translation_references()
 
     for _, file in ipairs(translation_files) do
       local translations = util.load_translations(file)
-      if translations[translation_key] then
+      if dig.dig(translations, translation_key) then
         break
       end
       is_missing_translation = false
     end
 
-    local hl_group = is_missing_translation and "Comment" or "ErrorMsg"
     local start_row, start_col, end_row, end_col = translation_key_node:range()
-    api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
+
+    local hl_group = util.highlight_group(is_missing_translation)
+    if hl_group then
+      api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
+    end
 
     if not is_missing_translation then
       table.insert(diagnostics, {
@@ -77,6 +81,23 @@ function M.highlight_translation_references()
   end
   -- Set diagnostics
   vim.diagnostic.set(namespace, bufnr, diagnostics)
+end
+
+local function enter_translation(choice, translation_key, messages_dir)
+  if not choice then return end
+
+  local selected_language = choice.language
+  local current_translation = choice.current_translation or ""
+  local new_translation = vim.fn.input("Enter translation for '" ..
+    translation_key .. "' in " .. selected_language .. ": ", current_translation)
+
+  if new_translation ~= "" then
+    local translation_file = messages_dir .. "/" .. selected_language .. ".json"
+    local translations = util.load_translations(translation_file)
+    dig.place(translations, translation_key, new_translation)
+    util.save_translations(translation_file, translations)
+    M.highlight_translation_references()
+  end
 end
 
 function M.show_translation_menu()
@@ -98,16 +119,28 @@ function M.show_translation_menu()
 
   local items = {}
 
+  local config = util.read_config_file()
+  local skip_lang_select = dig.dig(config, "skip_lang_select")
+  local default_lang = dig.dig(config, "default_lang")
+
   for _, file in ipairs(translation_files) do
     local language = fn.fnamemodify(file, ":t:r")
     local translations = util.load_translations(file)
-    local current_translation = translations[translation_key]
+    local current_translation = dig.dig(translations, translation_key)
     local status = current_translation and current_translation or "------"
-    table.insert(items, {
+
+    local choice = {
       language = language,
       status = status,
       current_translation = current_translation
-    })
+    }
+
+    if skip_lang_select and language == default_lang then
+      enter_translation(choice, translation_key, messages_dir)
+      return
+    end
+
+    table.insert(items, choice)
   end
 
   vim.ui.select(items, {
@@ -115,22 +148,7 @@ function M.show_translation_menu()
     format_item = function(item)
       return ">> " .. item.language .. ": " .. item.status
     end,
-  }, function(choice)
-    if choice then
-      local selected_language = choice.language
-      local current_translation = choice.current_translation or ""
-      local new_translation = vim.fn.input("Enter translation for '" ..
-        translation_key .. "' in " .. selected_language .. ": ", current_translation)
-
-      if new_translation ~= "" then
-        local translation_file = messages_dir .. "/" .. selected_language .. ".json"
-        local translations = util.load_translations(translation_file)
-        translations[translation_key] = new_translation
-        util.save_translations(translation_file, translations)
-        M.highlight_translation_references()
-      end
-    end
-  end)
+  }, function(choice) enter_translation(choice, translation_key, messages_dir) end)
 end
 
 function M.translate_default()
@@ -161,7 +179,7 @@ function M.translate_default()
 
   local translation_file = messages_dir .. "/" .. default_lang .. ".json"
   local translations = util.load_translations(translation_file)
-  translations[translation_key] = translation_key
+  dig.place(translations, translation_key, translation_key)
   util.save_translations(translation_file, translations)
   M.highlight_translation_references()
   M.show_translation_menu()
