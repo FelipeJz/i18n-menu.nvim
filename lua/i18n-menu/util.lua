@@ -5,6 +5,7 @@ local ts = vim.treesitter
 local json = require("snippet_converter.utils.json_utils")
 local dig = require("i18n-menu.dig")
 local json_util = require("i18n-menu.json_util")
+local smart_default = require("i18n-menu.smart_default")
 
 function M.load_translations(file)
   local f = io.open(file, "r")
@@ -184,6 +185,17 @@ function M.highlight_group(is_present)
   end
 
   return nil
+end
+
+function M.default_translation(translation_key)
+  local config = M.read_config_file()
+  local default_translation_strat = dig.dig(config, "default_translation")
+
+  if default_translation_strat == "smart_default" then
+    return smart_default.smart_default(translation_key)
+  end
+
+  return translation_key
 end
 
 return M
