@@ -182,7 +182,7 @@ function M.setup()
   api.nvim_command("augroup TranslateHighlight")
   api.nvim_command("autocmd!")
   api.nvim_command(
-    "autocmd BufEnter,BufRead *.jsx,*.tsx lua require('i18n-menu').highlight_translation_references()")
+    "autocmd BufEnter,BufRead *.js,*.ts,*.jsx,*.tsx lua require('i18n-menu').highlight_translation_references()")
   api.nvim_command(
     "autocmd InsertLeave *.jsx,*.tsx lua require('i18n-menu').highlight_translation_references()")
   api.nvim_command("augroup END")
