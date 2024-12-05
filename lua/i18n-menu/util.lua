@@ -137,6 +137,29 @@ function M.get_translation_files()
   return translation_files
 end
 
+function M.translation_reference_queries()
+  local config = M.read_config_file()
+  local queries = {}
+
+  local function_name = config and config.function_name or "t"
+  table.insert(queries, ts.query.parse('javascript', string.format([[
+      (call_expression
+          function: (identifier) @func_name (#eq? @func_name "%s")
+          arguments: (arguments
+              (string
+                  (string_fragment) @translation_key
+              )
+          )
+      )
+  ]], function_name)))
+
+  for _, pattern in ipairs(dig.dig(config, "function_patterns") or {}) do
+    table.insert(queries, ts.query.parse('javascript', pattern))
+  end
+
+  return queries
+end
+
 function M.get_translation_key()
   local bufnr = api.nvim_get_current_buf()
   local config = M.read_config_file()
@@ -147,27 +170,19 @@ function M.get_translation_key()
   local tree = parser:parse()[1]
   local root = tree:root()
 
-  local function_name = config and config.function_name or "t"
-  local query = ts.query.parse('javascript', string.format([[
-        (call_expression
-            function: (identifier) @func_name (#eq? @func_name "%s")
-            arguments: (arguments
-                (string
-                    (string_fragment) @translation_key
-                )
-            )
-        )
-    ]], function_name))
-
   local translation_key
-  for _, match in query:iter_matches(root, bufnr, row, row + 1) do
-    local translation_key_node = match[#match]
-    local start_row, start_col, end_row, end_col = translation_key_node:range()
-    if row == start_row and col >= start_col and col <= end_col then
-      translation_key = ts.get_node_text(translation_key_node, bufnr)
-      break
+
+  for _, query in ipairs(M.translation_reference_queries()) do
+    for _, match in query:iter_matches(root, bufnr, row, row + 1) do
+      local translation_key_node = match[#match]
+      local start_row, start_col, end_row, end_col = translation_key_node:range()
+      if row == start_row and col >= start_col and col <= end_col then
+        translation_key = ts.get_node_text(translation_key_node, bufnr)
+        break
+      end
     end
   end
+
   return translation_key
 end
 

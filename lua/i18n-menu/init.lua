@@ -31,52 +31,42 @@ function M.highlight_translation_references()
   local tree = parser:parse()[1]
   local root = tree:root()
 
-  local function_name = config and config.function_name or "t"
-  local query = ts.query.parse('javascript', string.format([[
-        (call_expression
-            function: (identifier) @func_name (#eq? @func_name "%s")
-            arguments: (arguments
-                (string
-                    (string_fragment) @translation_key
-                )
-            )
-        )
-    ]], function_name))
-
   local diagnostics = {}
 
-  for _, match in query:iter_matches(root, bufnr, 0, -1) do
-    local translation_key_node = match[#match]
-    local translation_key = ts.get_node_text(translation_key_node, bufnr)
+  for _, query in ipairs(util.translation_reference_queries()) do
+    for _, match in query:iter_matches(root, bufnr, 0, -1) do
+      local translation_key_node = match[#match]
+      local translation_key = ts.get_node_text(translation_key_node, bufnr)
 
-    local is_missing_translation = true
+      local is_missing_translation = true
 
-    for _, file in ipairs(translation_files) do
-      local translations = util.load_translations(file)
-      if dig.dig(translations, translation_key) then
-        break
+      for _, file in ipairs(translation_files) do
+        local translations = util.load_translations(file)
+        if dig.dig(translations, translation_key) then
+          break
+        end
+        is_missing_translation = false
       end
-      is_missing_translation = false
-    end
 
-    local start_row, start_col, end_row, end_col = translation_key_node:range()
+      local start_row, start_col, end_row, end_col = translation_key_node:range()
 
-    local hl_group = util.highlight_group(is_missing_translation)
-    if hl_group then
-      api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
-    end
+      local hl_group = util.highlight_group(is_missing_translation)
+      if hl_group then
+        api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
+      end
 
-    if not is_missing_translation then
-      table.insert(diagnostics, {
-        bufnr = bufnr,
-        lnum = start_row,
-        col = start_col,
-        end_lnum = end_row,
-        end_col = end_col,
-        severity = vim.diagnostic.severity.WARN,
-        source = "i18n-menu",
-        message = "Translation missing: " .. translation_key,
-      })
+      if not is_missing_translation then
+        table.insert(diagnostics, {
+          bufnr = bufnr,
+          lnum = start_row,
+          col = start_col,
+          end_lnum = end_row,
+          end_col = end_col,
+          severity = vim.diagnostic.severity.WARN,
+          source = "i18n-menu",
+          message = "Translation missing: " .. translation_key,
+        })
+      end
     end
   end
   -- Set diagnostics
