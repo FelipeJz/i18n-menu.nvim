@@ -141,7 +141,7 @@ function M.translation_reference_queries()
   local config = M.read_config_file()
   local queries = {}
 
-  local function_name = config and config.function_name or "t"
+  local function_name = dig.dig(config, "function_name") or "t"
   table.insert(queries, ts.query.parse('javascript', string.format([[
       (call_expression
           function: (identifier) @func_name (#eq? @func_name "%s")
