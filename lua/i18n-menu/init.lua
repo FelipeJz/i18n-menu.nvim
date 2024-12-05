@@ -5,7 +5,6 @@ local ts = vim.treesitter
 local M = {}
 local util = require("i18n-menu.util")
 local dig = require("i18n-menu.dig")
-local smart_default = require("i18n-menu.smart_default")
 
 function M.highlight_translation_references()
   local config = util.read_config_file()
