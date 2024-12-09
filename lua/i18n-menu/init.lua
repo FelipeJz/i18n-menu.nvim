@@ -179,7 +179,10 @@ function M.translate_default()
 
   local translation_file = messages_dir .. "/" .. default_lang .. ".json"
   local translations = util.load_translations(translation_file)
-  dig.place(translations, translation_key, translation_key)
+  local default_translation = util.default_translation(translation_key)
+
+  dig.place(translations, translation_key, default_translation)
+
   util.save_translations(translation_file, translations)
   M.highlight_translation_references()
   M.show_translation_menu()
