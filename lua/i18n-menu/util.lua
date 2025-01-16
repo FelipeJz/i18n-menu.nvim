@@ -139,10 +139,9 @@ end
 
 function M.translation_reference_queries()
   local config = M.read_config_file()
-  local queries = {}
 
-  local function_name = config and config.function_name or "t"
-  table.insert(queries, ts.query.parse('javascript', string.format([[
+  local default_function_name = config and config.function_name or "t"
+  local default_pattern = string.format([[
       (call_expression
           function: (identifier) @func_name (#eq? @func_name "%s")
           arguments: (arguments
@@ -151,7 +150,11 @@ function M.translation_reference_queries()
               )
           )
       )
-  ]], function_name)))
+  ]], default_function_name)
+
+  local queries = {}
+
+  table.insert(queries, ts.query.parse('javascript', default_pattern))
 
   for _, pattern in ipairs(config and config.function_patterns or {}) do
     table.insert(queries, ts.query.parse('javascript', pattern))
