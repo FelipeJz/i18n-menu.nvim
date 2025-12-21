@@ -14,61 +14,83 @@ function M.highlight_translation_references()
   end
 
   local namespace = api.nvim_create_namespace("i18n-menu")
-  local bufnr = api.nvim_get_current_buf()
+  local buffer_number = api.nvim_get_current_buf()
 
   local translation_files = util.get_translation_files()
   if not translation_files then
     return
   end
 
-  -- Clear previous highlights
-  api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
+  -- Clear previous hihgligts and diagnostics
+  api.nvim_buf_clear_namespace(buffer_number, namespace, 0, -1)
+  vim.diagnostic.reset(namespace, buffer_number)
 
-  -- Clear diagnostics
-  vim.diagnostic.reset(namespace, bufnr)
+  local ok_parser, parser = pcall(ts.get_parser, buffer_number, "javascript")
+  if not ok_parser or not parser then
+    return
+  end
 
-  local parser = ts.get_parser(bufnr, 'javascript')
   local tree = parser:parse()[1]
+  if not tree then
+    return
+  end
+
   local root = tree:root()
 
-  local function_name = config and config.function_name or "t"
-  local query = ts.query.parse('javascript', string.format([[
-        (call_expression
-            function: (identifier) @func_name (#eq? @func_name "%s")
-            arguments: (arguments
-                (string
-                    (string_fragment) @translation_key
-                )
-            )
+  local function_name = (config and config.function_name) or "t"
+  local query_string = string.format([[
+    (call_expression
+      function: (identifier) @func_name (#eq? @func_name "%s")
+      arguments: (arguments
+        (string
+          (string_fragment) @translation_key
         )
-    ]], function_name))
+      )
+    )
+  ]], function_name)
+
+  local ok_query, query = pcall(ts.query.parse, "javascript", query_string)
+  if not ok_query then
+    return
+  end
 
   local diagnostics = {}
 
-  for _, match in query:iter_matches(root, bufnr, 0, -1) do
-    local translation_key_node = match[#match]
-    local translation_key = ts.get_node_text(translation_key_node, bufnr)
+  for capture_id, node in query:iter_captures(root, buffer_number, 0, -1) do
+    if query.captures[capture_id] ~= "translation_key" then
+      goto continue
+    end
+
+    local translation_key = ts.get_node_text(node, buffer_number)
+    local start_row, start_col, end_row, end_col = node:range()
 
     local is_missing_translation = true
-
-    for _, file in ipairs(translation_files) do
-      local translations = util.load_translations(file)
+    for _, file_path in ipairs(translation_files) do
+      local translations = util.load_translations(file_path)
       if dig.dig(translations, translation_key) then
+        is_missing_translation = false
         break
       end
-      is_missing_translation = false
     end
 
-    local start_row, start_col, end_row, end_col = translation_key_node:range()
-
-    local hl_group = util.highlight_group(is_missing_translation)
-    if hl_group then
-      api.nvim_buf_add_highlight(bufnr, -1, hl_group, start_row, start_col, end_col)
+    local highlight_group = util.highlight_group(is_missing_translation)
+    if highlight_group then
+      api.nvim_buf_set_extmark(
+        buffer_number,
+        namespace,
+        start_row,
+        start_col,
+        {
+          end_row = end_row,
+          end_col = end_col,
+          hl_group = highlight_group,
+        }
+      )
     end
 
-    if not is_missing_translation then
+    if is_missing_translation then
       table.insert(diagnostics, {
-        bufnr = bufnr,
+        bufnr = buffer_number,
         lnum = start_row,
         col = start_col,
         end_lnum = end_row,
@@ -78,9 +100,11 @@ function M.highlight_translation_references()
         message = "Translation missing: " .. translation_key,
       })
     end
+
+    ::continue::
   end
-  -- Set diagnostics
-  vim.diagnostic.set(namespace, bufnr, diagnostics)
+
+  vim.diagnostic.set(namespace, buffer_number, diagnostics)
 end
 
 local function enter_translation(choice, translation_key, messages_dir)

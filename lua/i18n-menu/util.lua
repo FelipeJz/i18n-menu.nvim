@@ -143,32 +143,49 @@ function M.get_translation_key()
   local cursor = api.nvim_win_get_cursor(0)
   local row, col = cursor[1] - 1, cursor[2]
 
-  local parser = ts.get_parser(bufnr, 'javascript')
-  local tree = parser:parse()[1]
-  local root = tree:root()
-
-  local function_name = config and config.function_name or "t"
-  local query = ts.query.parse('javascript', string.format([[
-        (call_expression
-            function: (identifier) @func_name (#eq? @func_name "%s")
-            arguments: (arguments
-                (string
-                    (string_fragment) @translation_key
-                )
-            )
-        )
-    ]], function_name))
-
-  local translation_key
-  for _, match in query:iter_matches(root, bufnr, row, row + 1) do
-    local translation_key_node = match[#match]
-    local start_row, start_col, end_row, end_col = translation_key_node:range()
-    if row == start_row and col >= start_col and col <= end_col then
-      translation_key = ts.get_node_text(translation_key_node, bufnr)
-      break
-    end
+  local ok, parser = pcall(ts.get_parser, bufnr, "javascript")
+  if not ok or not parser then
+    return nil
   end
-  return translation_key
+
+  local tree = parser:parse()[1]
+  if not tree then
+    return nil
+  end
+
+  local root = tree:root()
+  local function_name = (config and config.function_name) or "t"
+
+  local query_string = string.format([[
+    (call_expression
+      function: (identifier) @func_name (#eq? @func_name "%s")
+      arguments: (arguments
+        (string
+          (string_fragment) @translation_key
+        )
+      )
+    )
+  ]], function_name)
+
+  local ok_q, query = pcall(ts.query.parse, "javascript", query_string)
+  if not ok_q then
+    return nil
+  end
+
+  for id, node in query:iter_captures(root, bufnr, row, row + 1) do
+    if query.captures[id] ~= "translation_key" then
+      goto continue
+    end
+
+    local sr, sc, er, ec = node:range()
+    if row == sr and col >= sc and col <= ec then
+      return ts.get_node_text(node, bufnr)
+    end
+
+    ::continue::
+  end
+
+  return nil
 end
 
 function M.highlight_group(is_present)
