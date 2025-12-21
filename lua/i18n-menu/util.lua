@@ -137,24 +137,22 @@ function M.get_translation_files()
   return translation_files
 end
 
-function M.get_translation_key()
-  local bufnr = api.nvim_get_current_buf()
-  local config = M.read_config_file()
-  local cursor = api.nvim_win_get_cursor(0)
-  local row, col = cursor[1] - 1, cursor[2]
+function M.iter_translation_keys(opts, callback)
+  local bufnr = opts.bufnr
+  local lang = opts.lang or "javascript"
+  local function_name = opts.function_name or "t"
 
-  local ok, parser = pcall(ts.get_parser, bufnr, "javascript")
+  local ok, parser = pcall(ts.get_parser, bufnr, lang)
   if not ok or not parser then
-    return nil
+    return
   end
 
   local tree = parser:parse()[1]
   if not tree then
-    return nil
+    return
   end
 
   local root = tree:root()
-  local function_name = (config and config.function_name) or "t"
 
   local query_string = string.format([[
     (call_expression
@@ -167,25 +165,42 @@ function M.get_translation_key()
     )
   ]], function_name)
 
-  local ok_q, query = pcall(ts.query.parse, "javascript", query_string)
+  local ok_q, query = pcall(ts.query.parse, lang, query_string)
   if not ok_q then
-    return nil
+    return
   end
 
-  for id, node in query:iter_captures(root, bufnr, row, row + 1) do
-    if query.captures[id] ~= "translation_key" then
-      goto continue
-    end
+  local start_row = opts.start_row or 0
+  local end_row = opts.end_row or -1
 
+  for id, node in query:iter_captures(root, bufnr, start_row, end_row) do
+    if query.captures[id] == "translation_key" then
+      callback(node)
+    end
+  end
+end
+
+function M.get_translation_key()
+  local bufnr = api.nvim_get_current_buf()
+  local config = M.read_config_file()
+  local row, col = unpack(api.nvim_win_get_cursor(0))
+  row = row - 1
+
+  local result
+
+  M.iter_translation_keys({
+    bufnr = bufnr,
+    function_name = (config and config.function_name) or "t",
+    start_row = row,
+    end_row = row + 1,
+  }, function(node)
     local sr, sc, er, ec = node:range()
     if row == sr and col >= sc and col <= ec then
-      return ts.get_node_text(node, bufnr)
+      result = ts.get_node_text(node, bufnr)
     end
+  end)
 
-    ::continue::
-  end
-
-  return nil
+  return result
 end
 
 function M.highlight_group(is_present)
