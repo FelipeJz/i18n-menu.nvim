@@ -16,6 +16,8 @@ Using Lazy
     require("i18n-menu").setup()
     vim.keymap.set("n", "<leader>ii", ":TranslateMenu<cr>")
     vim.keymap.set("n", "<leader>id", ":TranslateDefault<cr>")
+    vim.keymap.set("n", "<leader>ia", ":TranslateListAll<cr>")
+    vim.keymap.set("n", "<leader>ib", ":TranslateListBuffer<cr>")
   end,
 }
 
@@ -25,6 +27,8 @@ Using Lazy
 
 - :TranslationMenu - Shows the translation menu.
 - :TranslationDefault - Sets the key as the default translation, then shows the menu.
+- :TranslationListAll- List all the keys in the project
+- :TranslationListBuffer- List all the keys in current buffer
 
 ### Config file
 

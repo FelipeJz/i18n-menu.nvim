@@ -180,7 +180,7 @@ function M.iter_translation_keys(opts, callback)
   end
 end
 
-function M.get_translation_key()
+function M.get_key_under_cursor()
   local bufnr = api.nvim_get_current_buf()
   local config = M.read_config_file()
   local row, col = unpack(api.nvim_win_get_cursor(0))
@@ -219,6 +219,63 @@ function M.highlight_group(is_present)
   return nil
 end
 
+function M.highlight_translation_references()
+  local config = M.read_config_file()
+  local project_root = M.get_project_root()
+  if not project_root then return end
+
+  local bufnr = api.nvim_get_current_buf()
+  local namespace = api.nvim_create_namespace("i18n-menu")
+
+  local translation_files = M.get_translation_files()
+  if not translation_files then return end
+
+  api.nvim_buf_clear_namespace(bufnr, namespace, 0, -1)
+  vim.diagnostic.reset(namespace, bufnr)
+
+  local diagnostics = {}
+
+  M.iter_translation_keys({
+    bufnr = bufnr,
+    function_name = (config and config.function_name) or "t",
+  }, function(node)
+    local key = ts.get_node_text(node, bufnr)
+    local sr, sc, er, ec = node:range()
+
+    local missing = true
+    for _, file in ipairs(translation_files) do
+      if dig.dig(M.load_translations(file), key) then
+        missing = false
+        break
+      end
+    end
+
+    local hl = M.highlight_group(missing)
+    if hl then
+      api.nvim_buf_set_extmark(bufnr, namespace, sr, sc, {
+        end_row = er,
+        end_col = ec,
+        hl_group = hl,
+      })
+    end
+
+    if missing then
+      diagnostics[#diagnostics + 1] = {
+        bufnr = bufnr,
+        lnum = sr,
+        col = sc,
+        end_lnum = er,
+        end_col = ec,
+        severity = vim.diagnostic.severity.WARN,
+        source = "i18n-menu",
+        message = "Translation missing: " .. key,
+      }
+    end
+  end)
+
+  vim.diagnostic.set(namespace, bufnr, diagnostics)
+end
+
 function M.default_translation(translation_key)
   local config = M.read_config_file()
   local default_translation_strat = dig.dig(config, "default_translation")
@@ -228,6 +285,61 @@ function M.default_translation(translation_key)
   end
 
   return translation_key
+end
+
+local function enter_translation(choice, translation_key, messages_dir)
+  if not choice then return end
+
+  local selected_language = choice.language
+  local current_translation = choice.current_translation or ""
+  local new_translation = vim.fn.input("Enter translation for '" ..
+    translation_key .. "' in " .. selected_language .. ": ", current_translation)
+
+  if new_translation ~= "" then
+    local translation_file = messages_dir .. "/" .. selected_language .. ".json"
+    local translations = M.load_translations(translation_file)
+    dig.place(translations, translation_key, new_translation)
+    M.save_translations(translation_file, translations)
+    M.highlight_translation_references()
+  end
+end
+
+function M.open_menu(translation_key, messages_dir, translation_files)
+  local items = {}
+  local config = M.read_config_file()
+  local skip_lang_select = dig.dig(config, "skip_lang_select")
+  local default_lang = dig.dig(config, "default_lang")
+
+  for _, file in ipairs(translation_files) do
+    local language = fn.fnamemodify(file, ":t:r")
+    local translations = M.load_translations(file)
+    local current_translation = dig.dig(translations, translation_key)
+    local status = current_translation and current_translation or "------"
+
+    local choice = {
+      language = language,
+      status = status,
+      current_translation = current_translation
+    }
+
+    if skip_lang_select and language == default_lang then
+      enter_translation(choice, translation_key, messages_dir)
+      return
+    end
+
+    table.insert(items, choice)
+  end
+
+  vim.ui.select(items, {
+    prompt = string.format("Translate [%s] in:", translation_key),
+    format_item = function(item)
+      return string.format(">> %-10s: %s", item.language, item.status)
+    end,
+  }, function(choice)
+    if choice then
+      enter_translation(choice, translation_key, messages_dir)
+    end
+  end)
 end
 
 return M
