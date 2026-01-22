@@ -37,12 +37,15 @@ i18n.json - This optional config file should be located in the project_root and 
 ```JSON
 {
     "function_name": "t",
+    "function_patterns": [],
     "messages_dir": "/messages",
     "default_lang": "en",
     "skip_lang_select": false
-
 }
 ```
+
+- `function_name` - Name of the translation function to match (default: `"t"`)
+- `function_patterns` - Additional treesitter query patterns for matching translation keys. Useful for matching JSX attributes like `<Trans i18nKey="key">` or method calls like `i18n.t("key")`. Each pattern must capture the key as `@translation_key`.
 
 ## TODO
 - Auto translate using external libraries

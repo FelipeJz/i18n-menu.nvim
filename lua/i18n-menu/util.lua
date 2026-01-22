@@ -141,6 +141,7 @@ function M.iter_translation_keys(opts, callback)
 	local bufnr = opts.bufnr
 	local lang = opts.lang or "javascript"
 	local function_name = opts.function_name or "t"
+	local function_patterns = opts.function_patterns or {}
 
 	local ok, parser = pcall(ts.get_parser, bufnr, lang)
 	if not ok or not parser then
@@ -154,7 +155,7 @@ function M.iter_translation_keys(opts, callback)
 
 	local root = tree:root()
 
-	local query_string = string.format(
+	local default_pattern = string.format(
 		[[
     (call_expression
       function: (identifier) @func_name (#eq? @func_name "%s")
@@ -168,17 +169,28 @@ function M.iter_translation_keys(opts, callback)
 		function_name
 	)
 
-	local ok_q, query = pcall(ts.query.parse, lang, query_string)
-	if not ok_q then
-		return
+	local queries = {}
+
+	local ok_q, query = pcall(ts.query.parse, lang, default_pattern)
+	if ok_q then
+		table.insert(queries, query)
+	end
+
+	for _, pattern in ipairs(function_patterns) do
+		local ok_p, custom_query = pcall(ts.query.parse, lang, pattern)
+		if ok_p then
+			table.insert(queries, custom_query)
+		end
 	end
 
 	local start_row = opts.start_row or 0
 	local end_row = opts.end_row or -1
 
-	for id, node in query:iter_captures(root, bufnr, start_row, end_row) do
-		if query.captures[id] == "translation_key" then
-			callback(node)
+	for _, q in ipairs(queries) do
+		for id, node in q:iter_captures(root, bufnr, start_row, end_row) do
+			if q.captures[id] == "translation_key" then
+				callback(node)
+			end
 		end
 	end
 end
@@ -194,6 +206,7 @@ function M.get_key_under_cursor()
 	M.iter_translation_keys({
 		bufnr = bufnr,
 		function_name = (config and config.function_name) or "t",
+		function_patterns = config and config.function_patterns,
 		start_row = row,
 		end_row = row + 1,
 	}, function(node)
@@ -245,6 +258,7 @@ function M.highlight_translation_references()
 	M.iter_translation_keys({
 		bufnr = bufnr,
 		function_name = (config and config.function_name) or "t",
+		function_patterns = config and config.function_patterns,
 	}, function(node)
 		local key = ts.get_node_text(node, bufnr)
 		local sr, sc, er, ec = node:range()

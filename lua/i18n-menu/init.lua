@@ -31,6 +31,7 @@ function M.show_buffer_keys_menu()
 	util.iter_translation_keys({
 		bufnr = api.nvim_get_current_buf(),
 		function_name = (config and config.function_name) or "t",
+		function_patterns = config and config.function_patterns,
 	}, function(node)
 		local key = ts.get_node_text(node, api.nvim_get_current_buf())
 		if key and not seen[key] then
@@ -132,9 +133,9 @@ function M.setup()
 	api.nvim_command("augroup TranslateHighlight")
 	api.nvim_command("autocmd!")
 	api.nvim_command(
-		"autocmd BufEnter,BufRead *.jsx,*.tsx lua require('i18n-menu.util').highlight_translation_references()"
+		"autocmd BufEnter,BufRead *.js,*.ts,*.jsx,*.tsx lua require('i18n-menu.util').highlight_translation_references()"
 	)
-	api.nvim_command("autocmd InsertLeave *.jsx,*.tsx lua require('i18n-menu.util').highlight_translation_references()")
+	api.nvim_command("autocmd InsertLeave *.js,*.ts,*.jsx,*.tsx lua require('i18n-menu.util').highlight_translation_references()")
 	api.nvim_command("augroup END")
 
 	api.nvim_command("command! TranslateMenu lua require('i18n-menu').show_key_under_cursor_menu()")
